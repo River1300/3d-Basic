@@ -10,7 +10,7 @@ public class Follow : MonoBehaviour
 
     void Update()
     {
-        // [4]. 1) 카메라는 프레임마다 플레이어를 따라서 움직인다.
+        // [4]. 1) 카메라는 프레임마다 플레이어를 따라서 움직인다. -> Player
         transform.position = target.position + offset;
     }
 }
