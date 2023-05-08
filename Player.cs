@@ -32,6 +32,17 @@ public class Player : MonoBehaviour
     bool sDown3;
     bool isSwap;
     GameObject equipWeapon;
+    // [13]. 필요 속성 : 아이템 변수, 아이템 Max 변수
+    public int maxAmmo;
+    public int maxHealth;
+    public int maxCoin;
+    public int maxHasGrenade;
+    public int ammo;
+    public int health;
+    public int coin;
+    public int hasGrenade;
+    // [15]. 필요 속성 : 공전하는 오브젝트를 관리하기 위한 변수 -> Orbit
+    public GameObject[] grenade;
 
     void Awake()
     {   
@@ -211,6 +222,36 @@ public class Player : MonoBehaviour
             // [7]. 2) 착지를 할 때 파라미터를 전달한다.
             anim.SetBool("isJump", false);
             isJump = false;
+        }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.tag == "Item")
+        {
+            Item item = other.GetComponent<Item>();
+            switch(item.type)
+            {
+                case Item.Type.Ammo:
+                    ammo += item.value;
+                    if(ammo > maxAmmo) ammo = maxAmmo;
+                    break;
+                case Item.Type.Coin:
+                    coin += item.value;
+                    if(coin > maxCoin) coin = maxCoin;
+                    break;
+                case Item.Type.Heart:
+                    health += item.value;
+                    if(health > maxHealth) health = maxHealth;
+                    break;
+                case Item.Type.Grenade:
+                    // [15]. 5) 0부터 수류탄을 활성화 시킨다.
+                    grenade[hasGrenade].SetActive(true);
+                    hasGrenade += item.value;
+                    if(hasGrenade > maxHasGrenade) hasGrenade = maxHasGrenade;
+                    break;
+            }
+            Destroy(other.gameObject);
         }
     }
 
