@@ -31,7 +31,7 @@ public class Player : MonoBehaviour
     bool sDown2;
     bool sDown3;
     bool isSwap;
-    GameObject equipWeapon;
+    Weapon equipWeapon;
     // [13]. 필요 속성 : 아이템 변수, 아이템 Max 변수
     public int maxAmmo;
     public int maxHealth;
@@ -43,6 +43,10 @@ public class Player : MonoBehaviour
     public int hasGrenade;
     // [15]. 필요 속성 : 공전하는 오브젝트를 관리하기 위한 변수 -> Orbit
     public GameObject[] grenade;
+    // [17]. 필요 속성 : 키 플래그, 공격 상태 플래그, 공격 딜레이
+    bool fDown;
+    bool isFireReady = true;
+    float fireDelay;
 
     void Awake()
     {   
@@ -58,6 +62,7 @@ public class Player : MonoBehaviour
         Move();
         Turn();
         Jump();
+        Attack();
         Dodge();
         Swap();
         Interaction();
@@ -82,6 +87,9 @@ public class Player : MonoBehaviour
         sDown1 = Input.GetButtonDown("Swap1");
         sDown2 = Input.GetButtonDown("Swap2");
         sDown3 = Input.GetButtonDown("Swap3");
+
+        // [17]. 10) 발사 버튼을 입력 받는다.
+        fDown = Input.GetButtonDown("Fire1");
     }
 
     void Move()
@@ -96,7 +104,7 @@ public class Player : MonoBehaviour
         }
 
         // [12]. 8) 무기를 교체 중일 떄는 움직임, 점프, 회피 모두 못한다.
-        if(isSwap)
+        if(isSwap || !isFireReady)
         {
             dirVec = Vector3.zero;
         }
@@ -130,6 +138,24 @@ public class Player : MonoBehaviour
 
             // [6]. 3) 현재 점프 중 임을 플래그에 저장한다.
             isJump = true;
+        }
+    }
+
+    void Attack()
+    {
+        // [17]. 11) 일단 현재 무기를 장착하고 있지 않다면 반환한다.
+        if(equipWeapon == null) return;
+        // [17]. 12) 공격 딜레이에 매 프레이마다 시간을 더해준다.
+        fireDelay += Time.deltaTime;
+        // [17]. 13) 현재 장착한 무기의 딜레이와 쌓인 공격 딜레이를 비교하여 공격 준비 플래그에 저장한다.
+        isFireReady = equipWeapon.rate < fireDelay;
+        // [17]. 14) 공격키가 눌렸고, 공격 준비가 된 상태일 경우 무기 사용 함수를 호출
+        if(fDown && isFireReady && !isSwap && !isDodge)
+        {
+            equipWeapon.Use();
+            // [17]. 15) 만들 예정인 애니매이션 파라미터를 전달
+            anim.SetTrigger("doSwing");
+            fireDelay = 0;
         }
     }
 
@@ -175,13 +201,15 @@ public class Player : MonoBehaviour
             // [12]. 3) 무기를 교체하면 기존에 장착한 무기는 빼야 한다.
             if(equipWeapon != null)
             {
-                equipWeapon.SetActive(false);
+                // [17]. 8) 스크립트를 가지고 있는 게임 오브젝트로 수정
+                equipWeapon.gameObject.SetActive(false);
             }
             // [12]. 10) 장착 중인 무기 번호를 저장한다.
             equipWeaponIndex = weaponIndex;
             // [12]. 4) 장착할 무기를 저장한다.
-            equipWeapon = weapons[weaponIndex];
-            equipWeapon.SetActive(true);
+            // [17]. 9) 해당 무기가 보유하고 있는 Weapon 스크립트를 전달
+            equipWeapon = weapons[weaponIndex].GetComponent<Weapon>();
+            equipWeapon.gameObject.SetActive(true);
             // [12]. 5) 무기 교체시 트리거 파라미터를 전달한다.
             anim.SetTrigger("doSwap");
             // [12]. 6) 현재 무기를 교체 중이라 한다.
@@ -245,7 +273,7 @@ public class Player : MonoBehaviour
                     if(health > maxHealth) health = maxHealth;
                     break;
                 case Item.Type.Grenade:
-                    // [15]. 5) 0부터 수류탄을 활성화 시킨다.
+                    // [15]. 5) 0부터 수류탄을 활성화 시킨다. -> Weapon
                     grenade[hasGrenade].SetActive(true);
                     hasGrenade += item.value;
                     if(hasGrenade > maxHasGrenade) hasGrenade = maxHasGrenade;
