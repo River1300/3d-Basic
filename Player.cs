@@ -47,6 +47,11 @@ public class Player : MonoBehaviour
     bool fDown;
     bool isFireReady = true;
     float fireDelay;
+    // [20]. 필요 속성 : 재장전 키 플래그, 현재 장전중 플래그
+    bool rDown;
+    bool isReload;
+    // [21]. 필요 속성 : 메인 카메라
+    public Camera followCamera;
 
     void Awake()
     {   
@@ -63,6 +68,7 @@ public class Player : MonoBehaviour
         Turn();
         Jump();
         Attack();
+        Reload();
         Dodge();
         Swap();
         Interaction();
@@ -89,7 +95,10 @@ public class Player : MonoBehaviour
         sDown3 = Input.GetButtonDown("Swap3");
 
         // [17]. 10) 발사 버튼을 입력 받는다.
-        fDown = Input.GetButtonDown("Fire1");
+        fDown = Input.GetButton("Fire1");
+
+        // [20]. 2) 장전 버튼을 입력 받는다.
+        rDown = Input.GetButtonDown("Reload");
     }
 
     void Move()
@@ -104,7 +113,7 @@ public class Player : MonoBehaviour
         }
 
         // [12]. 8) 무기를 교체 중일 떄는 움직임, 점프, 회피 모두 못한다.
-        if(isSwap || !isFireReady)
+        if(isSwap || isReload || !isFireReady)
         {
             dirVec = Vector3.zero;
         }
@@ -122,6 +131,24 @@ public class Player : MonoBehaviour
     {
         // [3]. 1) 플레이어의 방향에 따라 오브젝트를 회전시킨다. -> Follow
         transform.LookAt(transform.position + dirVec);
+
+        if(fDown)
+        {
+            // [21]. 1) 스크린에서 월드로 Ray를 쏘도록 한다.
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+            // [21]. 2) 충돌한 오브젝트의 정보를 받는다.
+            RaycastHit rayHit;
+            // [21]. 3) ray로 부터 충돌한 지점의 정보를 rayHit가 반환 받았다면
+            if(Physics.Raycast(ray, out rayHit, 100))
+            {
+                // [21]. 4) 포인트 지점을 향하는 방향 벡터를 구한다.
+                Vector3 nextVec = rayHit.point - transform.position;
+                // [21]. 5) 이때 y축 값은 0으로 고정한다.
+                nextVec.y = 0;
+                // [21]. 6) 자신의 위치에서 방향벡터 만큼 이동한 위치를 바라보도록 한다.
+                transform.LookAt(transform.position + nextVec);
+            }
+        }
     }
 
     void Jump()
@@ -154,9 +181,34 @@ public class Player : MonoBehaviour
         {
             equipWeapon.Use();
             // [17]. 15) 만들 예정인 애니매이션 파라미터를 전달
-            anim.SetTrigger("doSwing");
+            anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");
             fireDelay = 0;
         }
+    }
+
+    void Reload()
+    {
+        // [20]. 3) 무기가 없거나 장착한 무기가 근접 무기이거나 총알이 0개면 반환
+        if(equipWeapon == null) return;
+        if(equipWeapon.type == Weapon.Type.Melee) return;
+        if(ammo == 0) return;
+
+        if(rDown && !isJump && !isDodge && !isSwap && isFireReady)
+        {
+            // [20]. 4) 애니매이션에 파라미터를 전달하고 장전 상태로 전환
+            anim.SetTrigger("doReload");
+            isReload = true;
+            Invoke("ReloadOut", 3f);
+        }
+    }
+
+    void ReloadOut()
+    {
+        // [20]. 5) 장전이 끝날 때 탄창이 채워지는데 보유한 탄창을 확인하여 탄창에 넣을 총알 갯수를 지정
+        int reAmmo = ammo < equipWeapon.maxAmmo ? ammo : equipWeapon.maxAmmo;
+        equipWeapon.curAmmo = reAmmo;
+        ammo -= reAmmo;
+        isReload = false;
     }
 
     void Dodge()
