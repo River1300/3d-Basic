@@ -52,6 +52,8 @@ public class Player : MonoBehaviour
     bool isReload;
     // [21]. 필요 속성 : 메인 카메라
     public Camera followCamera;
+    // [22]. 필요 속성 : 플래그
+    bool isBoarder;
 
     void Awake()
     {   
@@ -120,7 +122,9 @@ public class Player : MonoBehaviour
 
         // [1]. 3) 현재 위치 + 방향 * 속도 * 시간은 미래 위치
         // [2]. 4) 걷기 입력이 눌리고 있다면 속도를 낮춘다.
-        transform.position += dirVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
+        // [22]. 5) 플레이어가 벽을 향해 더이상 갈 수 없도록 미래의 위치 값을 더하지 않는다.
+        if(!isBoarder)
+            transform.position += dirVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
 
         // [2]. 3) 애니매이터로 파라미터를 전달한다.
         anim.SetBool("isRun", dirVec != Vector3.zero);
@@ -292,6 +296,27 @@ public class Player : MonoBehaviour
                 Destroy(nearObject);
             }
         }
+    }
+
+    void FreezeRotation()
+    {
+        // [22]. 2) 회전하는 속도를 0으로 맞춘다.
+        rigid.angularVelocity = Vector3.zero;
+    }
+
+    void StopToWall()
+    {
+        // [22]. 3) 플레이어가 앞으로 Ray를 쏜다.
+        Debug.DrawRay(transform.position, transform.forward * 5, Color.green);
+        // [22]. 4) Raycast로 충돌한 오브젝트를 확인하고 Wall일 경우 true를 준다.
+        isBoarder = Physics.Raycast(transform.position, transform.forward, 5, LayerMask.GetMask("Wall"));
+    }
+
+    // [22]. 1) 플레이어가 자동으로 회전하는 것을 맊는다.
+    void FixedUpdate()
+    {
+        FreezeRotation();
+        StopToWall();
     }
 
     void OnCollisionEnter(Collision other)
