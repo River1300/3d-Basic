@@ -14,7 +14,12 @@ public class Bullet : MonoBehaviour
         {
             Destroy(gameObject, 3);
         }
-        else if( other.gameObject.tag == "Wall")
+    }
+
+    // [23]. 2) 발사되는 총알은 트리거로 제거한다.
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == "Wall")
         {
             Destroy(gameObject);
         }
