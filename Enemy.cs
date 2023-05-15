@@ -29,7 +29,7 @@ public class Enemy : MonoBehaviour
             // [23]. 7) 넉백 위치는 자신의 위치에서 피격 위치를 뺀 값이다.
             Vector3 reactVec = transform.position - other.transform.position;
             // [23]. 3) 피격 코루틴 함수 호출
-            StartCoroutine(OnDamage(reactVec));
+            StartCoroutine(OnDamage(reactVec, false));
         }
         else if(other.tag == "Bullet")
         {
@@ -40,11 +40,20 @@ public class Enemy : MonoBehaviour
             // [23]. 9) 피격 이후 총알은 제거된다.
             Destroy(other.gameObject);
 
-            StartCoroutine(OnDamage(reactVec));
+            StartCoroutine(OnDamage(reactVec, false));
         }
     }
 
-    IEnumerator OnDamage(Vector3 reactVec)
+    // [24]. 12) 폭탄에 맞아 체력에 달고 넉백된다.
+    public void HitByGrenade(Vector3 explosionPos)
+    {
+        curHealth -= 100;
+        Vector3 reactVec = transform.position - explosionPos;
+        StartCoroutine(OnDamage(reactVec, true));
+    }
+
+    // [24]. 13) 폭탄에 맞아 사망한 적은 좀더 격정적이게 죽도록 플래그를 만든다.
+    IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
         // [23]. 5) 피격될 때 색을 바꾸고 일정 시간 뒤에 색을 되돌린다.
         mat.color = Color.red;
@@ -57,12 +66,25 @@ public class Enemy : MonoBehaviour
             // [23]. 6) 체력이 0이라면 레이어를 바꾸고 피격되지 않도록 한다.
             mat.color = Color.gray;
             gameObject.layer = 12;
-            // [23]. 8) 방향 값을 일반화 시키고 넉백 값에 약간의 높이를 추가한다.
-            reactVec = reactVec.normalized;
-            reactVec += Vector3.up;
 
-            rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+            if(isGrenade)
+            {
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up * 3;
 
+                // [24). 14) 더 격정적인 죽음을 위해 회전을 주며 튕겨저 나가게 한다.
+                rigid.freezeRotation = false;
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+                rigid.AddTorque(reactVec * 15, ForceMode.Impulse);
+            }
+            else
+            {
+                // [23]. 8) 방향 값을 일반화 시키고 넉백 값에 약간의 높이를 추가한다.
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up;
+
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+            }
             Destroy(gameObject, 4);
         }
     }

@@ -54,6 +54,9 @@ public class Player : MonoBehaviour
     public Camera followCamera;
     // [22]. 필요 속성 : 플래그
     bool isBoarder;
+    // [24]. 필요 속성 : 수류탄 프리팹, 수류탄 투척 버튼 플래그
+    public GameObject grenadeObj;
+    bool gDown;
 
     void Awake()
     {   
@@ -69,6 +72,7 @@ public class Player : MonoBehaviour
         Move();
         Turn();
         Jump();
+        Grenade();
         Attack();
         Reload();
         Dodge();
@@ -101,6 +105,9 @@ public class Player : MonoBehaviour
 
         // [20]. 2) 장전 버튼을 입력 받는다.
         rDown = Input.GetButtonDown("Reload");
+
+        // [24]. 1) 수류탄 버튼을 입력 받는다.
+        gDown = Input.GetButtonDown("Fire2");
     }
 
     void Move()
@@ -170,6 +177,34 @@ public class Player : MonoBehaviour
             // [6]. 3) 현재 점프 중 임을 플래그에 저장한다.
             isJump = true;
         }
+    }
+
+    void Grenade()
+    {
+       // [24]. 2) 수류탄을 던지지 못하는 경우를 제어문으로 만든다.
+       if(hasGrenade == 0) return;
+       if(gDown && !isReload && !isSwap)
+       {
+            // [24]. 3) 마우스 포인트 좌표로 수류탄을 던지도록 Ray를 쏜다.
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit rayHit;
+            if(Physics.Raycast(ray, out rayHit, 100))
+            {
+                Vector3 nextVec = rayHit.point - transform.position;
+                nextVec.y = 12;
+
+                // [24]. 4) 수류탄 객체 생성
+                GameObject instantGrenade = Instantiate(grenadeObj, transform.position, transform.rotation);
+                // [24]. 5) 수류탄 객체의 리지드 바디를 받아와서 던진다.
+                Rigidbody rigidGrenade = instantGrenade.GetComponent<Rigidbody>();
+                rigidGrenade.AddForce(nextVec, ForceMode.Impulse);
+                // [24]. 6) 수류탄에 회전을 주도록 한다.
+                rigidGrenade.AddTorque(Vector3.back * 10, ForceMode.Impulse);
+                // [24]. 7) 수류탄 갯수와 공전하는 수류탄을 비활성화
+                hasGrenade--;
+                grenade[hasGrenade].SetActive(false);
+            }
+       }
     }
 
     void Attack()
