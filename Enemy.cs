@@ -16,7 +16,13 @@ public class Enemy : MonoBehaviour
     public Transform target;
     NavMeshAgent nav;
     Animator anim;
-    bool isChase;
+    public bool isChase;
+    // [27]. 필요 속성 : 콜라이더, 현재 공격 중 플래그
+    public BoxCollider meleeArea;
+    public bool isAttack;
+    // [28]. 필요 속성 : 몬스터 타입
+    public enum Type { A, B, C };
+    public Type enemyType;
 
     void Awake()
     {
@@ -54,7 +60,82 @@ public class Enemy : MonoBehaviour
     // [25]. 4) 물리적 회전을 막는다.
     void FixedUpdate()
     {
+        // [27]. 1) 플레이어를 타겟팅 한다.
+        Targeting();
         FreezeVelocity();
+    }
+
+    void Targeting()
+    {
+        float targetRadius = 1.5f;
+        float targetRange = 3f;
+
+        // [28]. 1) 몬스터 타입에 따라서 공격 범위와 타겟팅 구역의 사이즈가 다른다.
+        switch (enemyType)
+        {
+            case Type.A:
+                targetRadius = 1.5f;
+                targetRange = 3f;
+                break;
+            case Type.B:
+                targetRadius = 1f;
+                targetRange = 12f;
+                break;
+            case Type.C:
+                targetRadius = 1.5f;
+                targetRange = 3f;
+                break;
+        }
+
+        // [27]. 2) 적이 앞을 향해 스피어 캐스트를 발사
+        RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+        // [27]. 3) 범위 안에 플레이어가 감지되어다면 공격 함수 호출
+        if(rayHits.Length > 0 && !isAttack)
+        {
+            StartCoroutine(Attack());
+        }
+    }
+
+    IEnumerator Attack()
+    {
+        // [27]. 4) 일단 멈추고 공격
+        isChase = false;
+        isAttack = true;
+        anim.SetBool("isAttack", true);
+
+        // [28]. 2) 몬스터 타입에 따라 각기 다른 공격을 한다.
+        switch(enemyType)
+        {
+            case Type.A:
+                // [27]. 5) 공격 범위 활성화
+                yield return new WaitForSeconds(0.7f);
+                meleeArea.enabled = true;
+                yield return new WaitForSeconds(1f);
+                meleeArea.enabled = false;
+                yield return new WaitForSeconds(1f);
+                break;
+            case Type.B:
+                // [28]. 3) 잠깐 멈추었다가 돌격
+                yield return new WaitForSeconds(0.1f);
+                rigid.AddForce(transform.forward * 20, ForceMode.Impulse);
+                meleeArea.enabled = true;
+                // [28]. 4) 빠른 속도로 돌진하다가 정지
+                yield return new WaitForSeconds(0.5f);
+                rigid.velocity = Vector3.zero;
+                meleeArea.enabled = false;
+
+                yield return new WaitForSeconds(2.5f);
+                break;
+            case Type.C:
+                
+                break;
+        }
+
+        
+        // [27]. 6) 공격이 끝났다면 다시 추적
+        isChase = true;
+        isAttack = false;
+        anim.SetBool("isAttack", false);
     }
 
     void FreezeVelocity()
