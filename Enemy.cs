@@ -42,10 +42,12 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         // [25]. 6) 추적 중일 때만 이동한다.
-        if(isChase)
+        // [26]. 6) 플래그를 사용해도 추적만 놓칠뿐 계속 이동하므로 활성화 시에만 움직이도록 한다.
+        if(nav.enabled)
         {
             // [25]. 3) 매 프레임 마다 플레이어를 향해 이동한다.
             nav.SetDestination(target.position);
+            nav.isStopped = !isChase;
         }
     }
 

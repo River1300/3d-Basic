@@ -57,12 +57,17 @@ public class Player : MonoBehaviour
     // [24]. 필요 속성 : 수류탄 프리팹, 수류탄 투척 버튼 플래그
     public GameObject grenadeObj;
     bool gDown;
+    // [26]. 필요 속성 : 현재 피격 상태임을 체크할 플래그
+    bool isDamage;
+    MeshRenderer[] meshs;
 
     void Awake()
     {   
         rigid = GetComponent<Rigidbody>();
         // [2]. 1) 애니매이터를 Player 자식이 가지고 있으므로 자식으로 부터 컴포넌트를 받아와 초기화
         anim = GetComponentInChildren<Animator>();
+        // [26]. 4) 복수형으로 모든 파츠의 컴포넌트를 받아온다.
+        meshs = GetComponentsInChildren<MeshRenderer>();
     }
 
     void Update()
@@ -393,6 +398,36 @@ public class Player : MonoBehaviour
             }
             Destroy(other.gameObject);
         }
+        else if(other.tag == "EnemyBullet")
+        {
+            if(!isDamage)
+            {
+                // [26]. 1) 적 총알에 피격되었을 경우 데미지 만큼 체력 손실
+                Bullet enemyBullet = other.GetComponent<Bullet>();
+                health -= enemyBullet.damage;
+                // [26]. 2) 피격 이벤트 진행
+                StartCoroutine(OnDamage());
+            }
+        }
+    }
+
+    IEnumerator OnDamage()
+    {
+        // [26]. 3) 현재 피격 상태이다.
+        isDamage = true;
+        // [26]. 5) 피격 상태일 때 색을 바꿔준다.
+        foreach(MeshRenderer mesh in meshs)
+        {
+            mesh.material.color = Color.yellow;
+        }
+
+        yield return new WaitForSeconds(1f);
+
+        foreach(MeshRenderer mesh in meshs)
+        {
+            mesh.material.color = Color.yellow;
+        }
+        isDamage = false;
     }
 
     void OnTriggerStay(Collider other)
