@@ -46,7 +46,7 @@ public class Weapon : MonoBehaviour
         meleeArea.enabled = true;
         trailEffect.enabled = true;
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.8f);
         // [17]. 6) 콜라이더를 비활성화 시킨다.
         meleeArea.enabled = false;
 

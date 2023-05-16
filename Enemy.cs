@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+// [25]. 2) 네비게이션을 받기 위한 전처리기
+using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
@@ -10,13 +12,57 @@ public class Enemy : MonoBehaviour
     Rigidbody rigid;
     BoxCollider boxCollider;
     Material mat;
+    // [25]. 필요 속성 : 네비게이션, 플레이어 위치
+    public Transform target;
+    NavMeshAgent nav;
+    Animator anim;
+    bool isChase;
 
     void Awake()
     {
         rigid = GetComponent<Rigidbody>();
         boxCollider = GetComponent<BoxCollider>();
         // [23]. 4) 마테리얼은 메쉬랜더러가 가지고 있다.
-        mat = GetComponent<MeshRenderer>().material;
+        // [25]. 1) 적 객체는 MeshRenderer컴포넌트를 자식이 가지고 있다.
+        mat = GetComponentInChildren<MeshRenderer>().material;
+
+        nav = GetComponent<NavMeshAgent>();
+        // [25]. 5) 자식 오브젝트가 가지고 있는 애니메이터 컨포넌트를 받아온다.
+        anim = GetComponentInChildren<Animator>();
+
+        Invoke("ChaseStart", 2f);
+    }
+
+    void ChaseStart()
+    {
+        isChase = true;
+        anim.SetBool("isWalk", true);
+    }
+
+    void Update()
+    {
+        // [25]. 6) 추적 중일 때만 이동한다.
+        if(isChase)
+        {
+            // [25]. 3) 매 프레임 마다 플레이어를 향해 이동한다.
+            nav.SetDestination(target.position);
+        }
+    }
+
+    // [25]. 4) 물리적 회전을 막는다.
+    void FixedUpdate()
+    {
+        FreezeVelocity();
+    }
+
+    void FreezeVelocity()
+    {
+        // [25]. 8) 추적 중일 때만 물리적 계산을 중지한다.
+        if(isChase)
+        {
+            rigid.velocity = Vector3.zero;
+            rigid.angularVelocity = Vector3.zero;
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -66,6 +112,10 @@ public class Enemy : MonoBehaviour
             // [23]. 6) 체력이 0이라면 레이어를 바꾸고 피격되지 않도록 한다.
             mat.color = Color.gray;
             gameObject.layer = 12;
+            // [25]. 7) 죽을 때 죽는 애니매이션 출력
+            isChase = false;
+            nav.enabled = false;
+            anim.SetTrigger("doDie");
 
             if(isGrenade)
             {
