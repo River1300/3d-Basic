@@ -23,6 +23,8 @@ public class Enemy : MonoBehaviour
     // [28]. 필요 속성 : 몬스터 타입
     public enum Type { A, B, C };
     public Type enemyType;
+    // [29]. 필요 속성 : 미사일 프리팹
+    public GameObject bullet;
 
     void Awake()
     {
@@ -82,8 +84,8 @@ public class Enemy : MonoBehaviour
                 targetRange = 12f;
                 break;
             case Type.C:
-                targetRadius = 1.5f;
-                targetRange = 3f;
+                targetRadius = 0.5f;
+                targetRange = 25f;
                 break;
         }
 
@@ -127,7 +129,14 @@ public class Enemy : MonoBehaviour
                 yield return new WaitForSeconds(2.5f);
                 break;
             case Type.C:
-                
+                yield return new WaitForSeconds(0.5f);
+                // [29]. 2) 총알을 인스턴트화
+                GameObject instantBullet = Instantiate(bullet, transform.position, transform.rotation);
+                // [29]. 3) 총알의 리지드바디를 받아와서 속도를 지정
+                Rigidbody rigidBullet = instantBullet.GetComponent<Rigidbody>();
+                rigidBullet.velocity = transform.forward * 20f;
+
+                yield return new WaitForSeconds(2.5f);
                 break;
         }
 

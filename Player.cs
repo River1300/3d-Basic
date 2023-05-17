@@ -405,6 +405,9 @@ public class Player : MonoBehaviour
                 // [26]. 1) 적 총알에 피격되었을 경우 데미지 만큼 체력 손실
                 Bullet enemyBullet = other.GetComponent<Bullet>();
                 health -= enemyBullet.damage;
+                // [29]. 4) 적 총알로 부터 리지드바디를 탐색한 뒤 있다면 제거
+                if(other.GetComponent<Rigidbody>() != null)
+                    Destroy(other.gameObject);
                 // [26]. 2) 피격 이벤트 진행
                 StartCoroutine(OnDamage());
             }
