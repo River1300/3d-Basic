@@ -11,7 +11,10 @@ public class Enemy : MonoBehaviour
     public int curHealth;
     Rigidbody rigid;
     BoxCollider boxCollider;
-    Material mat;
+    
+    // [32]. 보스의 모든 파츠를 담기 위해 배열로 변경
+    MeshRenderer[] meshs;
+
     // [25]. 필요 속성 : 네비게이션, 플레이어 위치
     public Transform target;
     NavMeshAgent nav;
@@ -20,8 +23,11 @@ public class Enemy : MonoBehaviour
     // [27]. 필요 속성 : 콜라이더, 현재 공격 중 플래그
     public BoxCollider meleeArea;
     public bool isAttack;
+
     // [28]. 필요 속성 : 몬스터 타입
-    public enum Type { A, B, C };
+    // [32]. 보스 타입 추가
+    public enum Type { A, B, C, D };
+
     public Type enemyType;
     // [29]. 필요 속성 : 미사일 프리팹
     public GameObject bullet;
@@ -32,13 +38,15 @@ public class Enemy : MonoBehaviour
         boxCollider = GetComponent<BoxCollider>();
         // [23]. 4) 마테리얼은 메쉬랜더러가 가지고 있다.
         // [25]. 1) 적 객체는 MeshRenderer컴포넌트를 자식이 가지고 있다.
-        mat = GetComponentInChildren<MeshRenderer>().material;
+        meshs = GetComponentsInChildren<MeshRenderer>();
 
         nav = GetComponent<NavMeshAgent>();
         // [25]. 5) 자식 오브젝트가 가지고 있는 애니메이터 컨포넌트를 받아온다.
         anim = GetComponentInChildren<Animator>();
 
-        Invoke("ChaseStart", 2f);
+        // [32]. 1) 보스는 플레이어를 추적하여 이동하지 않도록 함수 호출을 맊는다.
+        if(enemyType != Type.D)
+            Invoke("ChaseStart", 2f);
     }
 
     void ChaseStart()
@@ -51,7 +59,8 @@ public class Enemy : MonoBehaviour
     {
         // [25]. 6) 추적 중일 때만 이동한다.
         // [26]. 6) 플래그를 사용해도 추적만 놓칠뿐 계속 이동하므로 활성화 시에만 움직이도록 한다.
-        if(nav.enabled)
+        // [32]. 2) 보스는 추적하지 않는다.
+        if(nav.enabled && enemyType != Type.D)
         {
             // [25]. 3) 매 프레임 마다 플레이어를 향해 이동한다.
             nav.SetDestination(target.position);
@@ -69,32 +78,36 @@ public class Enemy : MonoBehaviour
 
     void Targeting()
     {
-        float targetRadius = 1.5f;
-        float targetRange = 3f;
-
-        // [28]. 1) 몬스터 타입에 따라서 공격 범위와 타겟팅 구역의 사이즈가 다른다.
-        switch (enemyType)
+        // [32]. 3) 보스는 일반 몹과 동일한 방식의 타겟팅을 하지 않는다.
+        if(enemyType != Type.D)
         {
-            case Type.A:
-                targetRadius = 1.5f;
-                targetRange = 3f;
-                break;
-            case Type.B:
-                targetRadius = 1f;
-                targetRange = 12f;
-                break;
-            case Type.C:
-                targetRadius = 0.5f;
-                targetRange = 25f;
-                break;
-        }
+            float targetRadius = 1.5f;
+            float targetRange = 3f;
 
-        // [27]. 2) 적이 앞을 향해 스피어 캐스트를 발사
-        RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
-        // [27]. 3) 범위 안에 플레이어가 감지되어다면 공격 함수 호출
-        if(rayHits.Length > 0 && !isAttack)
-        {
-            StartCoroutine(Attack());
+            // [28]. 1) 몬스터 타입에 따라서 공격 범위와 타겟팅 구역의 사이즈가 다른다.
+            switch (enemyType)
+            {
+                case Type.A:
+                    targetRadius = 1.5f;
+                    targetRange = 3f;
+                    break;
+                case Type.B:
+                    targetRadius = 1f;
+                    targetRange = 12f;
+                    break;
+                case Type.C:
+                    targetRadius = 0.5f;
+                    targetRange = 25f;
+                    break;
+            }
+
+            // [27]. 2) 적이 앞을 향해 스피어 캐스트를 발사
+            RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+            // [27]. 3) 범위 안에 플레이어가 감지되어다면 공격 함수 호출
+            if(rayHits.Length > 0 && !isAttack)
+            {
+                StartCoroutine(Attack());
+            }
         }
     }
 
@@ -194,15 +207,21 @@ public class Enemy : MonoBehaviour
     IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
         // [23]. 5) 피격될 때 색을 바꾸고 일정 시간 뒤에 색을 되돌린다.
-        mat.color = Color.red;
+        // [32]. 5) 모든 파츠를 순회하며 색을 바꾼다.
+        foreach(MeshRenderer mesh in meshs)
+            mesh.material.color = Color.red;
+
         yield return new WaitForSeconds(0.1f);
 
         if(curHealth > 0){
-            mat.color = Color.white;
+            foreach(MeshRenderer mesh in meshs)
+                mesh.material.color = Color.white;
         }
         else{
             // [23]. 6) 체력이 0이라면 레이어를 바꾸고 피격되지 않도록 한다.
-            mat.color = Color.gray;
+            foreach(MeshRenderer mesh in meshs)
+                mesh.material.color = Color.gray;
+
             gameObject.layer = 12;
             // [25]. 7) 죽을 때 죽는 애니매이션 출력
             isChase = false;
@@ -227,7 +246,9 @@ public class Enemy : MonoBehaviour
 
                 rigid.AddForce(reactVec * 5, ForceMode.Impulse);
             }
-            Destroy(gameObject, 4);
+            // [32]. 4) 보스는 시체를 남기지 않는다.
+            if(enemyType != Type.D)
+                Destroy(gameObject, 4);
         }
     }
 }
