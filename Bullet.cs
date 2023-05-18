@@ -8,11 +8,13 @@ public class Bullet : MonoBehaviour
     public int damage;
     // [29]. 필요 속성 : 근접 공격인지
     public bool isMelee;
+    // [31]. 필요 속성 : 보스 주먹 플래그
+    public bool isRock;
 
     // [18]. 1) 충돌하면 총알은 제거된다.
     void OnCollisionEnter(Collision other)
     {
-        if(other.gameObject.tag == "Floor")
+        if(!isRock && other.gameObject.tag == "Floor")
         {
             Destroy(gameObject, 3);
         }

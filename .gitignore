@@ -8,3 +8,5 @@ Bullet.cs.meta
 Enemy.cs.meta
 Grenade.cs.meta
 Missile.cs.meta
+BossMissile.cs.meta
+BossRock.cs.meta
