@@ -9,16 +9,16 @@ public class Enemy : MonoBehaviour
     // [23]. 필요 속성 : 피격 대상의 최대 체력과 현재 체력, 리지드바디, 콜라이더, 마테리얼
     public int maxHealth;
     public int curHealth;
-    Rigidbody rigid;
-    BoxCollider boxCollider;
+    public Rigidbody rigid;
+    public BoxCollider boxCollider;
     
     // [32]. 보스의 모든 파츠를 담기 위해 배열로 변경
-    MeshRenderer[] meshs;
+    public MeshRenderer[] meshs;
 
     // [25]. 필요 속성 : 네비게이션, 플레이어 위치
     public Transform target;
-    NavMeshAgent nav;
-    Animator anim;
+    public NavMeshAgent nav;
+    public Animator anim;
     public bool isChase;
     // [27]. 필요 속성 : 콜라이더, 현재 공격 중 플래그
     public BoxCollider meleeArea;
@@ -31,6 +31,8 @@ public class Enemy : MonoBehaviour
     public Type enemyType;
     // [29]. 필요 속성 : 미사일 프리팹
     public GameObject bullet;
+    // [33]. 필요 속성 : 죽은 상태를 체크할 플래그
+    public bool isDead;
 
     void Awake()
     {
@@ -57,6 +59,14 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
+        // [33]. 11) 죽었다면 모든 코루틴을 취소한다.
+        if(isDead)
+        {
+            StopAllCoroutines();
+            nav.isStopped = true;
+            return;
+        }
+
         // [25]. 6) 추적 중일 때만 이동한다.
         // [26]. 6) 플래그를 사용해도 추적만 놓칠뿐 계속 이동하므로 활성화 시에만 움직이도록 한다.
         // [32]. 2) 보스는 추적하지 않는다.
@@ -79,7 +89,7 @@ public class Enemy : MonoBehaviour
     void Targeting()
     {
         // [32]. 3) 보스는 일반 몹과 동일한 방식의 타겟팅을 하지 않는다.
-        if(enemyType != Type.D)
+        if(!isDead && enemyType != Type.D)
         {
             float targetRadius = 1.5f;
             float targetRange = 3f;
@@ -224,6 +234,8 @@ public class Enemy : MonoBehaviour
 
             gameObject.layer = 12;
             // [25]. 7) 죽을 때 죽는 애니매이션 출력
+            // [33]. 10) 죽었다면 플래그 체크
+            isDead = true;
             isChase = false;
             nav.enabled = false;
             anim.SetTrigger("doDie");
@@ -249,6 +261,8 @@ public class Enemy : MonoBehaviour
             // [32]. 4) 보스는 시체를 남기지 않는다.
             if(enemyType != Type.D)
                 Destroy(gameObject, 4);
+            else
+                anim.SetTrigger("doDie");
         }
     }
 }

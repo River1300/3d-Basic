@@ -405,16 +405,22 @@ public class Player : MonoBehaviour
                 // [26]. 1) 적 총알에 피격되었을 경우 데미지 만큼 체력 손실
                 Bullet enemyBullet = other.GetComponent<Bullet>();
                 health -= enemyBullet.damage;
-                // [29]. 4) 적 총알로 부터 리지드바디를 탐색한 뒤 있다면 제거
-                if(other.GetComponent<Rigidbody>() != null)
-                    Destroy(other.gameObject);
+                
+                // [33]. 13) 플레이어가 보스의 내려찍기를 당할 때 보스의 콜라이더로 인해 맵 밖으로 튕겨 나가는 경우가 있다.
+                //      => 보스의 점프 공격에 맞으면 OnDamage 함수에 전달한다.
+                bool isBossAtk = other.name == "Boss Melee Area";
+
                 // [26]. 2) 피격 이벤트 진행
-                StartCoroutine(OnDamage());
+                StartCoroutine(OnDamage(isBossAtk));
             }
+            // [29]. 4) 적 총알로 부터 리지드바디를 탐색한 뒤 있다면 제거
+            // [33]. 12) 플레이어 무적과 상관 없이 충돌한 적 총알은 제거된다.
+            if(other.GetComponent<Rigidbody>() != null)
+                Destroy(other.gameObject);
         }
     }
 
-    IEnumerator OnDamage()
+    IEnumerator OnDamage(bool isBossAtk)
     {
         // [26]. 3) 현재 피격 상태이다.
         isDamage = true;
@@ -424,6 +430,12 @@ public class Player : MonoBehaviour
             mesh.material.color = Color.yellow;
         }
 
+        if(isBossAtk)
+        {
+            // [33]. 14) 내력찍기를 당했으면 뒤로 넉백 당한다.
+            rigid.AddForce(transform.forward * -25, ForceMode.Impulse);
+        }
+
         yield return new WaitForSeconds(1f);
 
         foreach(MeshRenderer mesh in meshs)
@@ -431,6 +443,11 @@ public class Player : MonoBehaviour
             mesh.material.color = Color.white;
         }
         isDamage = false;
+
+        if(isBossAtk)
+        {
+            rigid.velocity = Vector3.zero;
+        }
     }
 
     void OnTriggerStay(Collider other)
