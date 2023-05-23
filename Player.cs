@@ -60,6 +60,8 @@ public class Player : MonoBehaviour
     // [26]. 필요 속성 : 현재 피격 상태임을 체크할 플래그
     bool isDamage;
     MeshRenderer[] meshs;
+    // [35]. 필요 속성 : 현재 쇼핑 중
+    bool isShop;
 
     void Awake()
     {   
@@ -221,7 +223,7 @@ public class Player : MonoBehaviour
         // [17]. 13) 현재 장착한 무기의 딜레이와 쌓인 공격 딜레이를 비교하여 공격 준비 플래그에 저장한다.
         isFireReady = equipWeapon.rate < fireDelay;
         // [17]. 14) 공격키가 눌렸고, 공격 준비가 된 상태일 경우 무기 사용 함수를 호출
-        if(fDown && isFireReady && !isSwap && !isDodge)
+        if(fDown && isFireReady && !isSwap && !isDodge && !isShop)
         {
             equipWeapon.Use();
             // [17]. 15) 만들 예정인 애니매이션 파라미터를 전달
@@ -334,6 +336,14 @@ public class Player : MonoBehaviour
                 hasWeapons[weaponIndex] = true;
                 // [11]. 4) 무기를 활성화 한 뒤에는 씬에 배치된 오브젝트 제거
                 Destroy(nearObject);
+            }
+            else if(nearObject.tag == "Shop")
+            {
+                // [34]. 4) 상점 트리거에 진입할 때 상점 정보를 받아오고 함수를 호출한다.
+                Shop shop = nearObject.GetComponent<Shop>();
+                shop.Enter(this);
+                // [35]. 7) 현재 쇼핑 중임을 상태 표시
+                isShop = true;
             }
         }
     }
@@ -453,7 +463,8 @@ public class Player : MonoBehaviour
     void OnTriggerStay(Collider other)
     {
         // [10]. 1) 가까이에 있는 오브젝트를 감지하여 변수에 저장한다.
-        if(other.tag == "Weapon")
+        // [34]. 3) 플레이어가 상점 오브젝트를 저장한다.
+        if(other.tag == "Weapon" || other.tag == "Shop")
         {
             nearObject = other.gameObject;
         }
@@ -464,6 +475,15 @@ public class Player : MonoBehaviour
     {
         if(other.tag == "Weapon")
         {
+            nearObject = null;
+        }
+        else if(other.tag == "Shop")
+        {
+            // [34]. 5) 나갈 때는 나가는 함수를 호출하도록 한다.
+            Shop shop = nearObject.GetComponent<Shop>();
+            shop.Exit();
+            // [35]. 8) 쇼핑이 끝났다.
+            isShop = false;
             nearObject = null;
         }
     }
