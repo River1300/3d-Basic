@@ -31,7 +31,7 @@ public class Player : MonoBehaviour
     bool sDown2;
     bool sDown3;
     bool isSwap;
-    Weapon equipWeapon;
+    public Weapon equipWeapon;
     // [13]. 필요 속성 : 아이템 변수, 아이템 Max 변수
     public int maxAmmo;
     public int maxHealth;
@@ -62,6 +62,8 @@ public class Player : MonoBehaviour
     MeshRenderer[] meshs;
     // [35]. 필요 속성 : 현재 쇼핑 중
     bool isShop;
+    // [39]. 필요 속성 : 플레이어 점수
+    public int score;
 
     void Awake()
     {   
@@ -70,6 +72,10 @@ public class Player : MonoBehaviour
         anim = GetComponentInChildren<Animator>();
         // [26]. 4) 복수형으로 모든 파츠의 컴포넌트를 받아온다.
         meshs = GetComponentsInChildren<MeshRenderer>();
+
+        //Debug.Log(PlayerPrefs.GetInt("MaxScore"));
+        // [36]. 1) 플레이어 최고 점수를 기록
+        //PlayerPrefs.SetInt("MaxScore", 11650);
     }
 
     void Update()
