@@ -64,6 +64,11 @@ public class Player : MonoBehaviour
     bool isShop;
     // [39]. 필요 속성 : 플레이어 점수
     public int score;
+    // [42]. 필요 속성 : 죽었다는 플래그, 게임 매니저
+    bool isDead;
+    public GameManager gameManager;
+    // [43]. 필요 속성 : 오디오 소스
+    public AudioSource jumpSound;
 
     void Awake()
     {   
@@ -135,7 +140,7 @@ public class Player : MonoBehaviour
         }
 
         // [12]. 8) 무기를 교체 중일 떄는 움직임, 점프, 회피 모두 못한다.
-        if(isSwap || isReload || !isFireReady)
+        if(isSwap || isReload || !isFireReady || isDead)
         {
             dirVec = Vector3.zero;
         }
@@ -156,7 +161,7 @@ public class Player : MonoBehaviour
         // [3]. 1) 플레이어의 방향에 따라 오브젝트를 회전시킨다. -> Follow
         transform.LookAt(transform.position + dirVec);
 
-        if(fDown)
+        if(fDown && !isDead)
         {
             // [21]. 1) 스크린에서 월드로 Ray를 쏘도록 한다.
             Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
@@ -178,7 +183,7 @@ public class Player : MonoBehaviour
     void Jump()
     {
         // [8]. 2) 회피 중에 점프키를 누르면 점프를 한다.
-        if(jDown && !isJump && dirVec == Vector3.zero && !isDodge && !isSwap)
+        if(jDown && !isJump && dirVec == Vector3.zero && !isDodge && !isSwap && !isDead)
         {
             // [6]. 2) 점프 키가 눌렸다면 y축으로 힘을 가한다.
             rigid.AddForce(Vector3.up * 25, ForceMode.Impulse);
@@ -189,6 +194,8 @@ public class Player : MonoBehaviour
 
             // [6]. 3) 현재 점프 중 임을 플래그에 저장한다.
             isJump = true;
+
+            jumpSound.Play();
         }
     }
 
@@ -196,7 +203,7 @@ public class Player : MonoBehaviour
     {
        // [24]. 2) 수류탄을 던지지 못하는 경우를 제어문으로 만든다.
        if(hasGrenade == 0) return;
-       if(gDown && !isReload && !isSwap)
+       if(gDown && !isReload && !isSwap && !isDead)
        {
             // [24]. 3) 마우스 포인트 좌표로 수류탄을 던지도록 Ray를 쏜다.
             Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
@@ -229,7 +236,7 @@ public class Player : MonoBehaviour
         // [17]. 13) 현재 장착한 무기의 딜레이와 쌓인 공격 딜레이를 비교하여 공격 준비 플래그에 저장한다.
         isFireReady = equipWeapon.rate < fireDelay;
         // [17]. 14) 공격키가 눌렸고, 공격 준비가 된 상태일 경우 무기 사용 함수를 호출
-        if(fDown && isFireReady && !isSwap && !isDodge && !isShop)
+        if(fDown && isFireReady && !isSwap && !isDodge && !isShop && !isDead)
         {
             equipWeapon.Use();
             // [17]. 15) 만들 예정인 애니매이션 파라미터를 전달
@@ -245,7 +252,7 @@ public class Player : MonoBehaviour
         if(equipWeapon.type == Weapon.Type.Melee) return;
         if(ammo == 0) return;
 
-        if(rDown && !isJump && !isDodge && !isSwap && isFireReady)
+        if(rDown && !isJump && !isDodge && !isSwap && isFireReady && !isDead)
         {
             // [20]. 4) 애니매이션에 파라미터를 전달하고 장전 상태로 전환
             anim.SetTrigger("doReload");
@@ -266,7 +273,7 @@ public class Player : MonoBehaviour
     void Dodge()
     {
         // [8]. 1) 이동 중의 점프키를 누르면 회피를 한다.
-        if(jDown && !isJump && dirVec != Vector3.zero && !isDodge && !isSwap)
+        if(jDown && !isJump && dirVec != Vector3.zero && !isDodge && !isSwap && !isDead)
         {
             // [8]. 7) 회피 방향 변수에 현재 방향 변수를 배정한다. -> Item
             dodgeVec = dirVec;
@@ -300,7 +307,7 @@ public class Player : MonoBehaviour
         if(sDown3) weaponIndex = 2;
 
         // [12]. 2) 무기 교체 버튼이 눌렸다면 해당 무기를 활성화
-        if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge)
+        if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isDead)
         {
             // [12]. 3) 무기를 교체하면 기존에 장착한 무기는 빼야 한다.
             if(equipWeapon != null)
@@ -332,7 +339,7 @@ public class Player : MonoBehaviour
     void Interaction()
     {
         // [11]. 2) 무기 근처에서 버튼이 눌렸다면 해당 무기 활성화
-        if(iDown && nearObject != null && !isJump && !isDodge)
+        if(iDown && nearObject != null && !isJump && !isDodge && !isDead)
         {
             if(nearObject.tag == "Weapon")
             {
@@ -452,6 +459,12 @@ public class Player : MonoBehaviour
             rigid.AddForce(transform.forward * -25, ForceMode.Impulse);
         }
 
+        // [42]. 1) 죽었다면 애니매이션을 출력하고 게임 매니저에 알린다.
+        if(health < 0 && !isDead)
+        {
+            OnDie();
+        }
+
         yield return new WaitForSeconds(1f);
 
         foreach(MeshRenderer mesh in meshs)
@@ -464,6 +477,13 @@ public class Player : MonoBehaviour
         {
             rigid.velocity = Vector3.zero;
         }
+    }
+
+    void OnDie()
+    {
+        anim.SetTrigger("doDie");
+        isDead = true;
+        gameManager.GameOver();
     }
 
     void OnTriggerStay(Collider other)

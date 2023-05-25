@@ -33,6 +33,10 @@ public class Enemy : MonoBehaviour
     public GameObject bullet;
     // [33]. 필요 속성 : 죽은 상태를 체크할 플래그
     public bool isDead;
+    // [41]. 필요 속성 : 플레이어에게 줄 점수와 돈, 게임 매니저
+    public int score;
+    public GameObject[] coins;
+    public GameManager gameManager;
 
     void Awake()
     {
@@ -60,12 +64,12 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         // [33]. 11) 죽었다면 모든 코루틴을 취소한다.
-        if(isDead)
-        {
-            StopAllCoroutines();
-            nav.isStopped = true;
-            return;
-        }
+        // if(isDead)
+        // {
+        //     StopAllCoroutines();
+        //     nav.isStopped = true;
+        //     return;
+        // }
 
         // [25]. 6) 추적 중일 때만 이동한다.
         // [26]. 6) 플래그를 사용해도 추적만 놓칠뿐 계속 이동하므로 활성화 시에만 움직이도록 한다.
@@ -239,6 +243,28 @@ public class Enemy : MonoBehaviour
             isChase = false;
             nav.enabled = false;
             anim.SetTrigger("doDie");
+            // [41]. 1) 죽으면서 점수와 동전을 떨군다.
+            Player player = target.GetComponent<Player>();
+            player.score += score;
+            int ranCoin = Random.Range(0, 3);
+            Instantiate(coins[ranCoin], transform.position, Quaternion.identity);
+
+            // [41]. 7) 자기 자신이 죽을 때마다 타입 별로 갯수를 차감 한다.
+            switch(enemyType)
+            {
+                case Type.A:
+                    gameManager.enemyCntA--;
+                    break;
+                case Type.B:
+                    gameManager.enemyCntB--;
+                    break;
+                case Type.C:
+                    gameManager.enemyCntC--;
+                    break;
+                case Type.D:
+                    gameManager.enemyCntD--;
+                    break;
+            }
 
             if(isGrenade)
             {
@@ -258,11 +284,7 @@ public class Enemy : MonoBehaviour
 
                 rigid.AddForce(reactVec * 5, ForceMode.Impulse);
             }
-            // [32]. 4) 보스는 시체를 남기지 않는다.
-            if(enemyType != Type.D)
-                Destroy(gameObject, 4);
-            else
-                anim.SetTrigger("doDie");
+            Destroy(gameObject, 4);
         }
     }
 }
