@@ -4,35 +4,13 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    // [1]. 필요 속성 : 플레이어가 이동하는데 필요한 방향, 속도값
-    public float speed;
-    float hAxisRaw;
-    float vAxisRaw;
-    Vector3 dirVec;
-    // [2]. 필요 속성 : 걷기 플래그, 애니매이터
-    bool wDown;
-    Animator anim;
-    // [6]. 필요 속성 : 점프 키, 점프 플래그, 리지드바디
-    bool jDown;
-    bool isJump;
-    Rigidbody rigid;
-    // [8]. 필요 속성 : 회피 플래그, 회피 방향값
-    bool isDodge;
-    Vector3 dodgeVec;
-    // [10]. 필요 속성 : 접촉한 오브젝트를 저장할 변수
-    GameObject nearObject;
-    // [11]. 필요 속성 : 상호 작용 플래그, 무기 오브젝트 배열, 무기 오브젝트 활성화 배열
-    bool iDown;
     public GameObject[] weapons;
-    public bool[] hasWeapons;
-    // [12]. 필요 속성 : 무기 스왑 플래그, 장착 무기, 교체 중 플래그, 무기 번호
-    int equipWeaponIndex = -1;
-    bool sDown1;
-    bool sDown2;
-    bool sDown3;
-    bool isSwap;
+    public GameObject[] grenade;
+
     public Weapon equipWeapon;
-    // [13]. 필요 속성 : 아이템 변수, 아이템 Max 변수
+
+    public Camera followCamera;
+
     public int maxAmmo;
     public int maxHealth;
     public int maxCoin;
@@ -41,19 +19,40 @@ public class Player : MonoBehaviour
     public int health;
     public int coin;
     public int hasGrenade;
-    // [15]. 필요 속성 : 공전하는 오브젝트를 관리하기 위한 변수 -> Orbit
-    public GameObject[] grenade;
-    // [17]. 필요 속성 : 키 플래그, 공격 상태 플래그, 공격 딜레이
+
+    public float speed;
+
+    public bool[] hasWeapons;
+
+    GameObject nearObject;
+
+    int equipWeaponIndex = -1;
+
+    float hAxisRaw;
+    float vAxisRaw;
+    float fireDelay;
+
+    bool wDown;
+    bool jDown;
+    bool isJump;
+    bool isDodge;
+    bool iDown;
+    bool sDown1;
+    bool sDown2;
+    bool sDown3;
+    bool isSwap;
     bool fDown;
     bool isFireReady = true;
-    float fireDelay;
-    // [20]. 필요 속성 : 재장전 키 플래그, 현재 장전중 플래그
     bool rDown;
     bool isReload;
-    // [21]. 필요 속성 : 메인 카메라
-    public Camera followCamera;
-    // [22]. 필요 속성 : 플래그
     bool isBoarder;
+
+    Vector3 dirVec;
+    Vector3 dodgeVec;   // 회피 방향을 고정할 방향 변수
+
+    Animator anim;
+
+    Rigidbody rigid; 
     // [24]. 필요 속성 : 수류탄 프리팹, 수류탄 투척 버튼 플래그
     public GameObject grenadeObj;
     bool gDown;
@@ -73,7 +72,7 @@ public class Player : MonoBehaviour
     void Awake()
     {   
         rigid = GetComponent<Rigidbody>();
-        // [2]. 1) 애니매이터를 Player 자식이 가지고 있으므로 자식으로 부터 컴포넌트를 받아와 초기화
+        // [2]. 1) 애니매이터를 Player 자식(MeshObject)이 가지고 있으므로 자식으로 부터 컴포넌트를 받아와 초기화
         anim = GetComponentInChildren<Animator>();
         // [26]. 4) 복수형으로 모든 파츠의 컴포넌트를 받아온다.
         meshs = GetComponentsInChildren<MeshRenderer>();
@@ -85,7 +84,6 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        // [5]. 1) Update()함수의 로직들을 기능 별로 묶어서 함수를 만든다.
         GetInput();
         Move();
         Turn();
@@ -100,65 +98,50 @@ public class Player : MonoBehaviour
 
     void GetInput()
     {
-        // [1]. 1) 먼저 입력받은 방향 값을 저장한다.
         hAxisRaw = Input.GetAxisRaw("Horizontal");
         vAxisRaw = Input.GetAxisRaw("Vertical");
 
-        // [2]. 2) 현재 걷기 입력키가 눌려지고 있는지를 플래그로 받는다.
-        wDown = Input.GetButton("Walk");
-
-        // [6]. 1) 점프 키 입력을 저장 받는다.
+        wDown = Input.GetButton("Walk"); // 누른 순간이 아닌 누르고 있는 중
         jDown = Input.GetButtonDown("Jump");
 
-        // [11]. 1) 상호 작용 키가 눌렸는지 변수에 저장
         iDown = Input.GetButtonDown("Interaction");
 
-        // [12]. 1) 무기 교체 버튼을 입력 받는다.
         sDown1 = Input.GetButtonDown("Swap1");
         sDown2 = Input.GetButtonDown("Swap2");
         sDown3 = Input.GetButtonDown("Swap3");
 
-        // [17]. 10) 발사 버튼을 입력 받는다.
         fDown = Input.GetButton("Fire1");
-
-        // [20]. 2) 장전 버튼을 입력 받는다.
         rDown = Input.GetButtonDown("Reload");
-
-        // [24]. 1) 수류탄 버튼을 입력 받는다.
         gDown = Input.GetButtonDown("Fire2");
     }
 
     void Move()
     {
-        // [1]. 2) 방향을 일반화 하여 저장한다.
+        // [1]. 1) 입력받은 Vector의 방향만 사용하기 위해 크기를 정규화 시킨다.
         dirVec = new Vector3(hAxisRaw, 0, vAxisRaw).normalized;
 
-        // [8]. 8) 현재 회피 중 이라면 방향을 바꾸지 못하도록 현재 방향에 회피 방향값을 배정한다.
+        // [8]. 6) 회피 중 이라면 방향을 바꾸지 못하도록 이동 방향에 회피 방향값을 지정한다.
         if(isDodge)
-        {
             dirVec = dodgeVec;
-        }
 
-        // [12]. 8) 무기를 교체 중일 떄는 움직임, 점프, 회피 모두 못한다.
+        // [12]. 8) 무기를 교체 중일 떄는 움직임, 점프, 회피 모두 못하도록 이동 값을 Vector3.zero
         if(isSwap || isReload || !isFireReady || isDead)
-        {
             dirVec = Vector3.zero;
-        }
 
-        // [1]. 3) 현재 위치 + 방향 * 속도 * 시간은 미래 위치
-        // [2]. 4) 걷기 입력이 눌리고 있다면 속도를 낮춘다.
         // [22]. 5) 플레이어가 벽을 향해 더이상 갈 수 없도록 미래의 위치 값을 더하지 않는다.
         if(!isBoarder)
+            // [1]. 2) 미래의 위치 = 현재 위치 + 방향 * 속도 * 시간
+            // [2]. 3) 걷기 입력(wDown)이 눌리고 있다면 속도를 낮춘다.
             transform.position += dirVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
 
-        // [2]. 3) 애니매이터로 파라미터를 전달한다.
+        // [2]. 2) 입력된 움직임 값이 있다면 애니매이터로 파라미터를 전달한다.
         anim.SetBool("isRun", dirVec != Vector3.zero);
         anim.SetBool("isWalk", wDown);
     }
 
     void Turn()
     {
-        // [3]. 1) 플레이어의 방향에 따라 오브젝트를 회전시킨다. -> Follow
+        // [3]. 1) 유저가 바라보는 방향에 따라 플레이어 오브젝트를 회전시킨다.
         transform.LookAt(transform.position + dirVec);
 
         if(fDown && !isDead)
@@ -182,18 +165,15 @@ public class Player : MonoBehaviour
 
     void Jump()
     {
-        // [8]. 2) 회피 중에 점프키를 누르면 점프를 한다.
         if(jDown && !isJump && dirVec == Vector3.zero && !isDodge && !isSwap && !isDead)
         {
-            // [6]. 2) 점프 키가 눌렸다면 y축으로 힘을 가한다.
+            // [6]. 1) 점프 키가 눌렸다면 y축으로 힘을 가한다.
             rigid.AddForce(Vector3.up * 25, ForceMode.Impulse);
+            isJump = true;
 
             // [7]. 1) 점프를 할 때 파라미터를 전달한다.
             anim.SetBool("isJump", true);
             anim.SetTrigger("doJump");
-
-            // [6]. 3) 현재 점프 중 임을 플래그에 저장한다.
-            isJump = true;
 
             jumpSound.Play();
         }
@@ -229,17 +209,16 @@ public class Player : MonoBehaviour
 
     void Attack()
     {
-        // [17]. 11) 일단 현재 무기를 장착하고 있지 않다면 반환한다.
+        // [17]. 6) 일단 현재 무기를 장착하고 있지 않다면 반환한다.
         if(equipWeapon == null) return;
-        // [17]. 12) 공격 딜레이에 매 프레이마다 시간을 더해준다.
+        // [17]. 7) 각각의 공격 타입마다 연사 속도가 있고 이 연사 속도를 기준으로 공격한다.
         fireDelay += Time.deltaTime;
-        // [17]. 13) 현재 장착한 무기의 딜레이와 쌓인 공격 딜레이를 비교하여 공격 준비 플래그에 저장한다.
         isFireReady = equipWeapon.rate < fireDelay;
-        // [17]. 14) 공격키가 눌렸고, 공격 준비가 된 상태일 경우 무기 사용 함수를 호출
+
         if(fDown && isFireReady && !isSwap && !isDodge && !isShop && !isDead)
         {
+            // [17]. 8) 무기 스크립트의 사용 함수를 호출하고 애니매이션을 출력한다.
             equipWeapon.Use();
-            // [17]. 15) 만들 예정인 애니매이션 파라미터를 전달
             anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");
             fireDelay = 0;
         }
@@ -247,14 +226,14 @@ public class Player : MonoBehaviour
 
     void Reload()
     {
-        // [20]. 3) 무기가 없거나 장착한 무기가 근접 무기이거나 총알이 0개면 반환
+        // [20]. 2) 장착한 무기가 없거나, 근접 무기이거나 총알이 0개면 반환
         if(equipWeapon == null) return;
         if(equipWeapon.type == Weapon.Type.Melee) return;
         if(ammo == 0) return;
 
         if(rDown && !isJump && !isDodge && !isSwap && isFireReady && !isDead)
         {
-            // [20]. 4) 애니매이션에 파라미터를 전달하고 장전 상태로 전환
+            // [20]. 3) 애니매이션에 파라미터를 전달하고 장전 시간 중 다른 행동을 맊기 위해 플래그에 true
             anim.SetTrigger("doReload");
             isReload = true;
             Invoke("ReloadOut", 3f);
@@ -263,7 +242,7 @@ public class Player : MonoBehaviour
 
     void ReloadOut()
     {
-        // [20]. 5) 장전이 끝날 때 탄창이 채워지는데 보유한 탄창을 확인하여 탄창에 넣을 총알 갯수를 지정
+        // [20]. 4) 탄창을 채울 때 해당 무기 최대 탄창과 플레이어 보유 탄약을 비교하여 장전
         int reAmmo = ammo < equipWeapon.maxAmmo ? ammo : equipWeapon.maxAmmo;
         equipWeapon.curAmmo = reAmmo;
         ammo -= reAmmo;
@@ -272,24 +251,23 @@ public class Player : MonoBehaviour
 
     void Dodge()
     {
-        // [8]. 1) 이동 중의 점프키를 누르면 회피를 한다.
         if(jDown && !isJump && dirVec != Vector3.zero && !isDodge && !isSwap && !isDead)
         {
-            // [8]. 7) 회피 방향 변수에 현재 방향 변수를 배정한다. -> Item
+            // [8]. 5) 회피 방향을 현재 이동 중인 방향으로 지정한다.
             dodgeVec = dirVec;
-            // [8]. 3) 회피 중에는 짧은 시간 동안 더 빠르게 움직인다.
+            // [8]. 1) 회피 중에는 짧은 시간 동안 더 빠르게 움직인다.
             speed *= 2;
             // [8]. 4) 회피 파라미터를 전달하고 회피 중 임을 플래그에 저장한다.
             anim.SetTrigger("doDodge");
             isDodge = true;
-            // [8]. 6) Invoke로 회피 종료를 예약한다.
+            // [8]. 3) Invoke로 회피 종료를 예약한다.
             Invoke("DodgeOut", 0.5f);
         }
     }
 
     void DodgeOut()
     {
-        // [8]. 5) 회피가 종료되면 속도가 원상태로 돌아가고 회피 플래그는 false가 된다.
+        // [8]. 2) 회피가 종료되면 속도가 원상태로 돌아가고 회피 플래그는 false가 된다.
         speed *= 0.5f;
         isDodge = false;
     }
@@ -301,53 +279,52 @@ public class Player : MonoBehaviour
         if(sDown2 && (!hasWeapons[1] || equipWeaponIndex == 1)) return;
         if(sDown3 && (!hasWeapons[2] || equipWeaponIndex == 2)) return;
 
+        // [12]. 1) 입력 받은 무기 키를 바탕으로 무기 인덱스를 지정한다.
         int weaponIndex = -1;
         if(sDown1) weaponIndex = 0;
         if(sDown2) weaponIndex = 1;
         if(sDown3) weaponIndex = 2;
 
-        // [12]. 2) 무기 교체 버튼이 눌렸다면 해당 무기를 활성화
+        // [12]. 2) 무기 교체 버튼이 눌려야만 교체를 실시 한다.
         if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isDead)
         {
-            // [12]. 3) 무기를 교체하면 기존에 장착한 무기는 빼야 한다.
+            // [12]. 5) 처음 게임을 시작하면 보유한 무기가 없는 상태로 진행이 됨으로 아무것도 없는 상태에서 비활성화 할 경우 null 에러가 발생한다.
+            //      => 그러니 null이 아닐 때만 비활성화 로직을 실행하도록 한다.
             if(equipWeapon != null)
-            {
-                // [17]. 8) 스크립트를 가지고 있는 게임 오브젝트로 수정
+                // [12]. 4) 기존에 장착하고 있던 무기는 비활성화 시키고 그 이후에 입력 받은 무기를 활성화 한다.
                 equipWeapon.gameObject.SetActive(false);
-            }
-            // [12]. 10) 장착 중인 무기 번호를 저장한다.
+
             equipWeaponIndex = weaponIndex;
-            // [12]. 4) 장착할 무기를 저장한다.
+            // [12]. 3) 입력 받은 무기 인덱스로 게임 오브젝트 배열을 활성화 한다.
             // [17]. 9) 해당 무기가 보유하고 있는 Weapon 스크립트를 전달
             equipWeapon = weapons[weaponIndex].GetComponent<Weapon>();
             equipWeapon.gameObject.SetActive(true);
-            // [12]. 5) 무기 교체시 트리거 파라미터를 전달한다.
-            anim.SetTrigger("doSwap");
-            // [12]. 6) 현재 무기를 교체 중이라 한다.
-            isSwap = true;
 
+            // [12]. 6) 무기 교체 애니매이션을 출력하고 현재 무기 교체 중이니 다른 행동을 하지 못하도록 플래그에 true
+            anim.SetTrigger("doSwap");
+            isSwap = true;
+            // [12]. 7) 일정 시간이 지난 뒤 플래그에 false
             Invoke("SwapOut", 0.4f);
         }
     }
 
     void SwapOut()
     {
-        // [12]. 7) 무기 교체가 끝났음
         isSwap = false;
     }
 
     void Interaction()
     {
-        // [11]. 2) 무기 근처에서 버튼이 눌렸다면 해당 무기 활성화
+        // [11]. 1) 상호작용 오브젝트가 비어있지 않다면!
         if(iDown && nearObject != null && !isJump && !isDodge && !isDead)
         {
             if(nearObject.tag == "Weapon")
             {
-                // [11]. 3) 무기 번호를 받아와서 활성화
+                // [11]. 2) 무기 번호(0, 1, 2)를 받아와서 현재 해당 무기를 가지고 있다고 체크
                 Item item = nearObject.GetComponent<Item>();
                 int weaponIndex = item.value;
                 hasWeapons[weaponIndex] = true;
-                // [11]. 4) 무기를 활성화 한 뒤에는 씬에 배치된 오브젝트 제거
+                // [11]. 3) 씬에 배치된 오브젝트 제거
                 Destroy(nearObject);
             }
             else if(nearObject.tag == "Shop")
@@ -375,19 +352,19 @@ public class Player : MonoBehaviour
         isBoarder = Physics.Raycast(transform.position, transform.forward, 5, LayerMask.GetMask("Wall"));
     }
 
-    // [22]. 1) 플레이어가 자동으로 회전하는 것을 맊는다.
     void FixedUpdate()
     {
+        // [22]. 1) 플레이어가 다른 오브젝트와 충돌때 리지드바디로 인한 물리적인 움직임을 맊는다.
         FreezeRotation();
         StopToWall();
     }
 
     void OnCollisionEnter(Collision other)
     {
-        // [6]. 4) 점프를 한 플레이어가 바닥에 찾지 했다면 점프 중이 아님을 플래그에 저장한다.
+        // [6]. 2) 점프를 한 플레이어가 바닥에 착지 했다면 플래그에 false
         if(other.gameObject.tag == "Floor")
         {
-            // [7]. 2) 착지를 할 때 파라미터를 전달한다.
+            // [7]. 2) 착지하는 순간 bool 파라미터를 전달 함으로써 착지 애니매이션이 출력되도록 한다.
             anim.SetBool("isJump", false);
             isJump = false;
         }
@@ -397,6 +374,7 @@ public class Player : MonoBehaviour
     {
         if(other.tag == "Item")
         {
+            // [14]. 1) 아이템의 타입을 통해 해당 아이템의 값을 증가 시킨다.
             Item item = other.GetComponent<Item>();
             switch(item.type)
             {
@@ -413,7 +391,7 @@ public class Player : MonoBehaviour
                     if(health > maxHealth) health = maxHealth;
                     break;
                 case Item.Type.Grenade:
-                    // [15]. 5) 0부터 수류탄을 활성화 시킨다. -> Weapon
+                    // [15]. 5) 보유하고 있는 수류탄 갯수만큼 0부터 수류탄을 활성화 시킨다.
                     grenade[hasGrenade].SetActive(true);
                     hasGrenade += item.value;
                     if(hasGrenade > maxHasGrenade) hasGrenade = maxHasGrenade;
@@ -488,19 +466,19 @@ public class Player : MonoBehaviour
 
     void OnTriggerStay(Collider other)
     {
-        // [10]. 1) 가까이에 있는 오브젝트를 감지하여 변수에 저장한다.
+        // [10]. 1) 상호 작용을 위해 가까이에 있는 오브젝트를 감지하여 변수에 저장한다.
         // [34]. 3) 플레이어가 상점 오브젝트를 저장한다.
         if(other.tag == "Weapon" || other.tag == "Shop")
         {
             nearObject = other.gameObject;
         }
-        Debug.Log(nearObject);
     }
     
     void OnTriggerExit(Collider other)
     {
         if(other.tag == "Weapon")
         {
+            // [10]. 2) 무기와 멀어지면 오브젝트에 널을 넣어 둔다.
             nearObject = null;
         }
         else if(other.tag == "Shop")

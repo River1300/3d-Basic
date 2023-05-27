@@ -6,12 +6,11 @@ using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
-    // [23]. 필요 속성 : 피격 대상의 최대 체력과 현재 체력, 리지드바디, 콜라이더, 마테리얼
     public int maxHealth;
     public int curHealth;
+
     public Rigidbody rigid;
     public BoxCollider boxCollider;
-    
     // [32]. 보스의 모든 파츠를 담기 위해 배열로 변경
     public MeshRenderer[] meshs;
 
@@ -186,23 +185,23 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // [23]. 1) 근접 공격 대미지와 원거리 공격 대미지를 나누어 받는다.
         if(other.tag == "Melee")
         {
+            // [23]. 1) 망치의 데미지를 계산하기 위해 무기 스크립트를 받는다.
             Weapon weapon = other.GetComponent<Weapon>();
             curHealth -= weapon.damage;
-            // [23]. 7) 넉백 위치는 자신의 위치에서 피격 위치를 뺀 값이다.
+            // [23]. 6) 넉백 위치는 자신의 위치에서 피격 위치를 뺀 값이다.
             Vector3 reactVec = transform.position - other.transform.position;
-            // [23]. 3) 피격 코루틴 함수 호출
             StartCoroutine(OnDamage(reactVec, false));
         }
         else if(other.tag == "Bullet")
         {
+            // [23]. 2) 총알의 데미지를 계산하기 위해 총알 스크립트를 받는다.
             Bullet bullet = other.GetComponent<Bullet>();
             curHealth -= bullet.damage;
 
             Vector3 reactVec = transform.position - other.transform.position;
-            // [23]. 9) 피격 이후 총알은 제거된다.
+            // [23]. 8) 피격 이후 총알은 제거된다.
             Destroy(other.gameObject);
 
             StartCoroutine(OnDamage(reactVec, false));
@@ -220,7 +219,7 @@ public class Enemy : MonoBehaviour
     // [24]. 13) 폭탄에 맞아 사망한 적은 좀더 격정적이게 죽도록 플래그를 만든다.
     IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
-        // [23]. 5) 피격될 때 색을 바꾸고 일정 시간 뒤에 색을 되돌린다.
+        // [23]. 4) 적이 피격될 때 색을 바꾸고 일정 시간 뒤에 색을 되돌린다.
         // [32]. 5) 모든 파츠를 순회하며 색을 바꾼다.
         foreach(MeshRenderer mesh in meshs)
             mesh.material.color = Color.red;
@@ -232,17 +231,18 @@ public class Enemy : MonoBehaviour
                 mesh.material.color = Color.white;
         }
         else{
-            // [23]. 6) 체력이 0이라면 레이어를 바꾸고 피격되지 않도록 한다.
+            // [23]. 5) 체력이 0이라면 레이어를 바꾸고 피격되지 않도록 한다.
             foreach(MeshRenderer mesh in meshs)
                 mesh.material.color = Color.gray;
-
             gameObject.layer = 12;
+
             // [25]. 7) 죽을 때 죽는 애니매이션 출력
             // [33]. 10) 죽었다면 플래그 체크
             isDead = true;
             isChase = false;
             nav.enabled = false;
             anim.SetTrigger("doDie");
+
             // [41]. 1) 죽으면서 점수와 동전을 떨군다.
             Player player = target.GetComponent<Player>();
             player.score += score;
@@ -278,7 +278,7 @@ public class Enemy : MonoBehaviour
             }
             else
             {
-                // [23]. 8) 방향 값을 일반화 시키고 넉백 값에 약간의 높이를 추가한다.
+                // [23]. 7) 방향 값을 일반화 시키고 넉백 값에 약간의 높이를 추가한다.
                 reactVec = reactVec.normalized;
                 reactVec += Vector3.up;
 
